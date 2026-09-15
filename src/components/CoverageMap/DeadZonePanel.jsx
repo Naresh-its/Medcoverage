@@ -8,25 +8,59 @@ export default function DeadZonePanel({ zone, onClose, onSimulateIntervention })
   if (!zone) return null;
 
   const isDeadZone = zone.status === 'dead_zone';
+  const isLimited = zone.status === 'limited';
+
+  const theme = isDeadZone
+    ? {
+        border: 'border-red-300',
+        headerBg: 'bg-red-600',
+        headerText: 'text-red-100',
+        title: 'High-Risk Medical Dead Zone',
+        badgeBg: 'bg-red-50/80 border-red-200',
+        badgeText: 'text-red-700',
+        badgeNum: 'text-red-600',
+        badgeSub: 'Critical deficit'
+      }
+    : isLimited
+      ? {
+          border: 'border-amber-300',
+          headerBg: 'bg-amber-600',
+          headerText: 'text-amber-100',
+          title: 'Limited Healthcare Access Zone',
+          badgeBg: 'bg-amber-50/80 border-amber-200',
+          badgeText: 'text-amber-800',
+          badgeNum: 'text-amber-700',
+          badgeSub: 'Modality constrained'
+        }
+      : {
+          border: 'border-emerald-300',
+          headerBg: 'bg-emerald-600',
+          headerText: 'text-emerald-100',
+          title: 'Optimal Healthcare Access Zone',
+          badgeBg: 'bg-emerald-50/80 border-emerald-200',
+          badgeText: 'text-emerald-800',
+          badgeNum: 'text-emerald-700',
+          badgeSub: 'Within golden hour'
+        };
 
   return (
-    <div className="bg-white rounded-lg border border-red-300 shadow-lg overflow-hidden flex flex-col max-h-full">
+    <div className={`bg-white rounded-lg border ${theme.border} shadow-lg overflow-hidden flex flex-col max-h-full`}>
       {/* Header Banner */}
-      <div className="bg-red-600 text-white px-4 py-3 flex items-center justify-between">
+      <div className={`${theme.headerBg} text-white px-4 py-3 flex items-center justify-between`}>
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-white animate-pulse" />
+          <AlertTriangle className="w-5 h-5 text-white" />
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-red-100">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${theme.headerText}`}>
               Coverage Analysis Report
             </span>
             <h3 className="text-base font-bold leading-tight">
-              {isDeadZone ? 'High-Risk Medical Dead Zone' : 'Limited Healthcare Access Zone'}
+              {theme.title}
             </h3>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="text-white/80 hover:text-white p-1 rounded-md hover:bg-red-700 transition-colors"
+          className="text-white/80 hover:text-white p-1 rounded-md hover:bg-black/10 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -42,12 +76,12 @@ export default function DeadZonePanel({ zone, onClose, onSimulateIntervention })
 
         {/* Compact Key Stats Grid */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="p-2.5 rounded-md bg-red-50/80 border border-red-100">
-            <span className="text-[10px] font-bold uppercase text-red-700">Effective Coverage</span>
-            <div className="text-2xl font-black text-red-600">
+          <div className={`p-2.5 rounded-md border ${theme.badgeBg}`}>
+            <span className={`text-[10px] font-bold uppercase ${theme.badgeText}`}>Effective Coverage</span>
+            <div className={`text-2xl font-black ${theme.badgeNum}`}>
               {zone.baselineMetrics.overallCoveragePct}%
             </div>
-            <span className="text-[10px] text-red-600 font-medium">Critical deficit</span>
+            <span className={`text-[10px] font-medium ${theme.badgeText}`}>{theme.badgeSub}</span>
           </div>
 
           <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200">
@@ -55,7 +89,9 @@ export default function DeadZonePanel({ zone, onClose, onSimulateIntervention })
             <div className="text-2xl font-black text-slate-900">
               {zone.baselineMetrics.avgResponseMin} <span className="text-xs font-normal text-slate-500">min</span>
             </div>
-            <span className="text-[10px] text-red-600 font-semibold">Exceeds golden hour</span>
+            <span className={`text-[10px] font-semibold ${isDeadZone ? 'text-red-600' : isLimited ? 'text-amber-600' : 'text-emerald-600'}`}>
+              {isDeadZone ? 'Exceeds golden hour' : isLimited ? 'Constrained transit' : 'Optimal transit'}
+            </span>
           </div>
 
           <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200">

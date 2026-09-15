@@ -22,11 +22,11 @@ export default function MedicalNeedsPage({ selectedNeedId, setSelectedNeedId }) 
 
   return (
     <PageTransition>
-      <div className="p-6 sm:p-8 space-y-6">
-        <div className="pb-4 border-b border-slate-200/70 flex items-center justify-between">
+      <div className="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
+        <div className="pb-4 border-b border-slate-200 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-bold uppercase tracking-wider text-red-600">
-              Clinical Requirements Engine
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
+              Medical Need Analysis
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
               What care does this patient need?
@@ -38,7 +38,7 @@ export default function MedicalNeedsPage({ selectedNeedId, setSelectedNeedId }) 
 
           <button
             onClick={() => navigate('/coverage')}
-            className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer transition-colors"
           >
             <span>View On Map</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -54,18 +54,18 @@ export default function MedicalNeedsPage({ selectedNeedId, setSelectedNeedId }) 
               <button
                 key={need.id}
                 onClick={() => setSelectedNeedId(need.id)}
-                className={`glass-card p-3.5 rounded-xl border text-left cursor-pointer ${
+                className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
                   isSelected
-                    ? '!bg-white !border-red-600 ring-2 ring-red-500/80 shadow-md'
-                    : 'hover:bg-white/80'
+                    ? 'bg-white border-blue-600 ring-2 ring-blue-100 shadow-sm'
+                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 shadow-2xs'
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-red-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                  <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
                     <Icon className="w-4 h-4" />
                   </div>
                   {need.urgency === 'CRITICAL' && (
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">
                       CRITICAL
                     </span>
                   )}
@@ -78,12 +78,19 @@ export default function MedicalNeedsPage({ selectedNeedId, setSelectedNeedId }) 
         </div>
 
         {/* The 3-Step Visual Requirement Pipeline */}
-        <div className="glass-card p-6 rounded-2xl space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/60">
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
             <div>
-              <span className="text-xs font-bold text-red-600 uppercase tracking-wider">
-                {currentNeed.urgency} Scenario Analysis
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+                  Clinical Modality Breakdown
+                </span>
+                {currentNeed.urgency === 'CRITICAL' && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">
+                    CRITICAL URGENCY
+                  </span>
+                )}
+              </div>
               <h2 className="text-xl font-extrabold text-slate-900 mt-1">
                 {currentNeed.name}
               </h2>
@@ -93,20 +100,20 @@ export default function MedicalNeedsPage({ selectedNeedId, setSelectedNeedId }) 
             </span>
           </div>
 
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl">
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl font-medium">
             {currentNeed.description}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
             {/* Step 1: Required Resources */}
-            <div className="bg-white/80 p-4 rounded-xl border border-white shadow-xs space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+            <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                 1. Required Resources
               </span>
               <div className="space-y-1.5">
                 {currentNeed.requiredResources.map((res) => (
-                  <div key={res.key} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs font-medium text-slate-800">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                  <div key={res.key} className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-800">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     <span>{res.label}</span>
                   </div>
                 ))}
@@ -114,35 +121,35 @@ export default function MedicalNeedsPage({ selectedNeedId, setSelectedNeedId }) 
             </div>
 
             {/* Step 2: Available Nearby */}
-            <div className="bg-white/80 p-4 rounded-xl border border-white shadow-xs space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+            <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                 2. Available Nearby
               </span>
               <div className="space-y-1.5 text-xs">
-                <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-between text-emerald-900 font-medium">
+                <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between text-emerald-900 font-medium">
                   <span>Metro Central</span>
-                  <span className="font-bold">Ready (100%)</span>
+                  <span className="font-bold text-emerald-700">Ready (100%)</span>
                 </div>
-                <div className="p-2 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-between text-amber-900 font-medium">
+                <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-between text-amber-900 font-medium">
                   <span>West Suburban</span>
-                  <span className="font-bold">Partial (62%)</span>
+                  <span className="font-bold text-amber-700">Partial (62%)</span>
                 </div>
-                <div className="p-2 rounded-lg bg-red-50 border border-red-100 flex items-center justify-between text-red-900 font-medium">
+                <div className="p-2 rounded-lg bg-red-50 border border-red-200 flex items-center justify-between text-red-900 font-medium">
                   <span>East Corridor</span>
-                  <span className="font-bold">Dead Zone (38%)</span>
+                  <span className="font-bold text-red-700">Dead Zone (38%)</span>
                 </div>
               </div>
             </div>
 
             {/* Step 3: Coverage Verdict */}
-            <div className="bg-white/80 p-4 rounded-xl border border-white shadow-xs space-y-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+            <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-2.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
                 3. Coverage Verdict
               </span>
-              <div className="p-3 rounded-lg bg-red-50/80 border border-red-200 text-xs text-red-950 font-medium leading-relaxed">
+              <div className="p-3 rounded-lg bg-white border border-slate-200 text-xs text-slate-800 font-medium leading-relaxed shadow-2xs">
                 “{currentNeed.bottleneckFactor}”
               </div>
-              <p className="text-[11px] text-slate-400 italic">
+              <p className="text-[11px] text-slate-500 italic">
                 *Proximity without matched clinical capability equals 0% effective access.
               </p>
             </div>
