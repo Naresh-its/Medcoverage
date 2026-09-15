@@ -1,3 +1,7 @@
+import { simulateIntervention } from '../engine/whatIfEngine.js';
+import { HOSPITALS, BLOOD_BANKS, AMBULANCES, DIAGNOSTICS, PHARMACIES } from './mockHealthcareData.js';
+import { MEDICAL_NEEDS } from './medicalNeeds.js';
+
 // Infrastructure simulation models and calculation logic
 
 export const SIMULATION_PRESETS = [
@@ -99,59 +103,80 @@ export const SIMULATION_PRESETS = [
   }
 ];
 
+const defaultResources = {
+  hospitals: HOSPITALS,
+  bloodBanks: BLOOD_BANKS,
+  ambulances: AMBULANCES,
+  diagnostics: DIAGNOSTICS,
+  pharmacies: PHARMACIES
+};
+
 // Calculation function for dynamic simulation input
-export function calculateSimulationResult(zone, action, resourceType, quantity) {
-  const currentCoverage = zone.baselineMetrics.overallCoveragePct;
-  const currentResponse = zone.baselineMetrics.avgResponseMin;
-  const population = zone.population;
+export function calculateSimulationResult(zone, action, resourceType, quantity, medicalNeed = null, resources = null) {
+  try {
+    const need = medicalNeed || (zone && zone.id === 'zone-west' ? MEDICAL_NEEDS.find(m => m.id === 'severe_bleeding') : MEDICAL_NEEDS[0]);
+    const resPool = resources || defaultResources;
+    const sim = simulateIntervention(zone, action, resourceType, quantity, need, resPool);
+    return {
+      before: sim.before,
+      after: sim.after,
+      impact: sim.impact,
+      simulatedMarker: sim.simulatedMarker,
+      virtualResources: sim.virtualResources
+    };
+  } catch (err) {
+    console.warn('Simulation dynamic engine fallback:', err);
+    const currentCoverage = zone?.baselineMetrics?.overallCoveragePct || 40;
+    const currentResponse = zone?.baselineMetrics?.avgResponseMin || 30;
+    const population = zone?.population || 100000;
 
-  let coverageGain = 0;
-  let responseReduction = 0;
+    let coverageGain = 0;
+    let responseReduction = 0;
 
-  if (action === "ADD") {
-    if (resourceType === "ambulance") {
-      coverageGain = Math.min(35, quantity * 17);
-      responseReduction = Math.min(18, quantity * 8);
-    } else if (resourceType === "hospital" || resourceType === "icu") {
-      coverageGain = Math.min(42, quantity * 38);
-      responseReduction = Math.min(16, quantity * 14);
-    } else if (resourceType === "blood_bank") {
-      coverageGain = Math.min(24, quantity * 20);
-      responseReduction = Math.min(8, quantity * 5);
-    } else if (resourceType === "diagnostic") {
-      coverageGain = Math.min(22, quantity * 18);
-      responseReduction = Math.min(7, quantity * 4);
+    if (action === "ADD") {
+      if (resourceType === "ambulance") {
+        coverageGain = Math.min(35, quantity * 17);
+        responseReduction = Math.min(18, quantity * 8);
+      } else if (resourceType === "hospital" || resourceType === "icu") {
+        coverageGain = Math.min(42, quantity * 38);
+        responseReduction = Math.min(16, quantity * 14);
+      } else if (resourceType === "blood_bank") {
+        coverageGain = Math.min(24, quantity * 20);
+        responseReduction = Math.min(8, quantity * 5);
+      } else if (resourceType === "diagnostic") {
+        coverageGain = Math.min(22, quantity * 18);
+        responseReduction = Math.min(7, quantity * 4);
+      } else {
+        coverageGain = Math.min(12, quantity * 10);
+        responseReduction = Math.min(4, quantity * 2);
+      }
+    } else if (action === "REMOVE") {
+      coverageGain = -Math.min(30, quantity * 15);
+      responseReduction = -Math.min(15, quantity * 6);
     } else {
-      coverageGain = Math.min(12, quantity * 10);
-      responseReduction = Math.min(4, quantity * 2);
+      coverageGain = Math.min(25, quantity * 14);
+      responseReduction = Math.min(12, quantity * 6);
     }
-  } else if (action === "REMOVE") {
-    coverageGain = -Math.min(30, quantity * 15);
-    responseReduction = -Math.min(15, quantity * 6);
-  } else {
-    // RELOCATE
-    coverageGain = Math.min(25, quantity * 14);
-    responseReduction = Math.min(12, quantity * 6);
+
+    const newCoverage = Math.max(15, Math.min(96, currentCoverage + coverageGain));
+    const newResponse = Math.max(7, Math.min(55, currentResponse - responseReduction));
+    const newZoneStatus = newCoverage >= 70 ? "covered" : newCoverage >= 50 ? "limited" : "dead_zone";
+    const peopleImpact = Math.round(population * Math.abs(coverageGain) / 100);
+
+    return {
+      before: {
+        coveragePct: currentCoverage,
+        responseMin: currentResponse,
+        zoneStatus: zone?.status || 'dead_zone',
+        populationCovered: Math.round(population * currentCoverage / 100)
+      },
+      after: {
+        coveragePct: newCoverage,
+        responseMin: newResponse,
+        zoneStatus: newZoneStatus,
+        populationCovered: Math.round(population * newCoverage / 100),
+        populationImpact: (coverageGain >= 0 ? "+" : "-") + peopleImpact.toLocaleString()
+      }
+    };
   }
-
-  const newCoverage = Math.max(15, Math.min(96, currentCoverage + coverageGain));
-  const newResponse = Math.max(7, Math.min(55, currentResponse - responseReduction));
-  const newZoneStatus = newCoverage >= 70 ? "covered" : newCoverage >= 50 ? "limited" : "dead_zone";
-  const peopleImpact = Math.round(population * Math.abs(coverageGain) / 100);
-
-  return {
-    before: {
-      coveragePct: currentCoverage,
-      responseMin: currentResponse,
-      zoneStatus: zone.status,
-      populationCovered: Math.round(population * currentCoverage / 100)
-    },
-    after: {
-      coveragePct: newCoverage,
-      responseMin: newResponse,
-      zoneStatus: newZoneStatus,
-      populationCovered: Math.round(population * newCoverage / 100),
-      populationImpact: (coverageGain >= 0 ? "+" : "-") + peopleImpact.toLocaleString()
-    }
-  };
 }
