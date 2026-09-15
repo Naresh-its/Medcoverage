@@ -1,15 +1,52 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import CoverageMap from '../components/CoverageMap/CoverageMap';
+import ErrorBoundary from '../components/Shared/ErrorBoundary';
+import PageTransition from '../components/PageTransition';
+import { COVERAGE_ZONES } from '../data/coverageZones';
 import { MEDICAL_NEEDS } from '../data/medicalNeeds';
-import { Clock } from 'lucide-react';
+import { Clock, ArrowLeft, Navigation, X } from 'lucide-react';
 
 export default function CoveragePage({ selectedNeedId, setSelectedNeedId }) {
-  const [selectedSectorId, setSelectedSectorId] = React.useState('zone-central');
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const routeDataFromState = location.state?.routeData || null;
+  const [activeRoute, setActiveRoute] = useState(routeDataFromState);
+
+  const [selectedSectorId, setSelectedSectorId] = useState(() => {
+    if (routeDataFromState?.selectedZoneId) return routeDataFromState.selectedZoneId;
+    return 'zone-central';
+  });
+
+  // If navigation state changes, update activeRoute
+  useEffect(() => {
+    if (location.state?.routeData) {
+      setActiveRoute(location.state.routeData);
+      if (location.state.routeData.selectedZoneId) {
+        setSelectedSectorId(location.state.routeData.selectedZoneId);
+      }
+      if (location.state.routeData.selectedDiseaseId && setSelectedNeedId) {
+        setSelectedNeedId(location.state.routeData.selectedDiseaseId);
+      }
+    }
+  }, [location.state, setSelectedNeedId]);
+
   const currentNeed = MEDICAL_NEEDS.find(n => n.id === selectedNeedId) || MEDICAL_NEEDS[0];
-  const currentSector = COVERAGE_ZONES.find(z => z.id === selectedSectorId) || COVERAGE_ZONES[0];
+  const currentSector = (COVERAGE_ZONES && COVERAGE_ZONES.find(z => z.id === selectedSectorId)) || (COVERAGE_ZONES && COVERAGE_ZONES[0]) || { name: 'Metro Central Core', center: { lat: 13.0720, lng: 80.2600 } };
+
+  const handleReturnToSearch = () => {
+    navigate('/', { 
+      state: { 
+        returnToResults: true, 
+        selectedDiseaseId: activeRoute?.selectedDiseaseId || selectedNeedId,
+        selectedZoneId: activeRoute?.selectedZoneId || selectedSectorId
+      } 
+    });
+  };
 
   return (
-    <div className="w-full flex-1 flex flex-col p-4 sm:p-6 lg:p-8 space-y-4">
+    <PageTransition className="p-4 sm:p-6 lg:p-8 space-y-4">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
@@ -58,6 +95,42 @@ export default function CoveragePage({ selectedNeedId, setSelectedNeedId }) {
         </div>
       </div>
 
+      {/* Active Route Banner if route was triggered */}
+      {activeRoute && (
+        <div className="bg-blue-50/90 border border-blue-200 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-2xs animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+              <Navigation className="w-3.5 h-3.5" />
+            </span>
+            <div>
+              <span className="font-extrabold text-blue-900">
+                Active Road Route Guidance:
+              </span>{' '}
+              <span className="text-blue-800 font-semibold">
+                {activeRoute.origin?.name} ➔ {activeRoute.hospital?.name}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleReturnToSearch}
+              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to 4 Hospitals</span>
+            </button>
+            <button
+              onClick={() => setActiveRoute(null)}
+              className="p-1.5 rounded-lg text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
+              title="Clear Route"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Selected Clinical Scenario Bar */}
       <div className="bg-white border border-slate-200 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs shadow-2xs">
         <div className="flex items-center gap-2">
@@ -77,12 +150,20 @@ export default function CoveragePage({ selectedNeedId, setSelectedNeedId }) {
 
       {/* Leaflet Map Frame */}
       <div className="w-full flex-1 min-h-[580px] rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-        <CoverageMap
-          selectedNeedId={selectedNeedId}
-          selectedLocation={currentSector.center}
-          height="580px"
-        />
+        <ErrorBoundary
+          title="Coverage Map Unavailable"
+          message="The interactive coverage map could not be loaded. Please check your Mapbox configuration or refresh."
+        >
+          <CoverageMap
+            selectedNeedId={selectedNeedId}
+            selectedLocation={currentSector.center}
+            activeRoute={activeRoute}
+            onClearRoute={() => setActiveRoute(null)}
+            onReturnToSearch={handleReturnToSearch}
+            height="580px"
+          />
+        </ErrorBoundary>
       </div>
-    </div>
+    </PageTransition>
   );
 }

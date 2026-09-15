@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import AppNavbar from './components/Navigation/AppNavbar';
+import ErrorBoundary from './components/Shared/ErrorBoundary';
 import HomePage from './pages/HomePage';
 import CoveragePage from './pages/CoveragePage';
 import MedicalNeedsPage from './pages/MedicalNeedsPage';
@@ -61,10 +62,12 @@ function MainLayout() {
 
       {/* Edge-to-edge content container filling full viewport */}
       <div className="flex-1 flex flex-col w-full">
-        <AnimatedWorkspace
-          selectedNeedId={selectedNeedId}
-          setSelectedNeedId={setSelectedNeedId}
-        />
+        <ErrorBoundary>
+          <AnimatedWorkspace
+            selectedNeedId={selectedNeedId}
+            setSelectedNeedId={setSelectedNeedId}
+          />
+        </ErrorBoundary>
       </div>
     </div>
   );

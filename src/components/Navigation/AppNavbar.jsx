@@ -34,9 +34,6 @@ export default function AppNavbar() {
             <span className="font-semibold text-slate-900">Med</span>
             <span className="font-black text-slate-900">Coverage</span>
           </span>
-          <span className="hidden sm:inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
-            Clinical Intelligence
-          </span>
         </div>
       </Link>
 
@@ -50,20 +47,30 @@ export default function AppNavbar() {
               key={link.path}
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.96 }}
+              className="relative"
             >
               <Link
                 to={link.path}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                   isActive
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'text-white'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">{link.label}</span>
                 {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5"></span>
+                  <motion.div
+                    layoutId="nav-active"
+                    className="absolute inset-0 bg-slate-900 rounded-lg shadow-xs"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
                 )}
+                <span className="relative z-10 flex items-center gap-1.5">
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">{link.label}</span>
+                  {isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
+                  )}
+                </span>
               </Link>
             </motion.div>
           );
