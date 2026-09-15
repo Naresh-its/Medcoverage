@@ -9,71 +9,60 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #0f172a;
-  color: #0f172a;
+  background-color: #F1F5F9;
+  color: #0F172A;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Glass Application Window Styles */
-.glass-window {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 
-    0 25px 60px -15px rgba(15, 23, 42, 0.22),
-    0 10px 30px -10px rgba(15, 23, 42, 0.12),
-    inset 0 1px 2px rgba(255, 255, 255, 0.95),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.03);
+/* Public Health Application Frame */
+.public-health-window {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.08);
+  border-radius: 28px;
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  box-shadow: 
-    0 4px 12px -2px rgba(15, 23, 42, 0.05),
-    inset 0 1px 1px rgba(255, 255, 255, 0.9);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+/* Hospital Clean White Cards */
+.hospital-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
 }
 
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(220, 38, 38, 0.35);
-  transform: translateY(-3px);
-  box-shadow: 
-    0 14px 28px -6px rgba(15, 23, 42, 0.08),
-    0 6px 14px -4px rgba(220, 38, 38, 0.12),
-    inset 0 1px 2px rgba(255, 255, 255, 1);
+.hospital-card:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
 }
 
-.glass-pill {
-  background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+/* Interactive Clean Buttons & Pills */
+.hospital-pill {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
 }
 
-.glass-pill:hover {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(220, 38, 38, 0.3);
+.hospital-pill:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
 }
 
-/* Leaflet Container Customization for Glass Frame */
+/* Leaflet Container Customization for Hospital Clean Frame */
 .leaflet-container {
   font-family: inherit !important;
   width: 100%;
   height: 100%;
-  border-radius: 12px;
+  border-radius: 20px;
 }
 
 .leaflet-popup-content-wrapper {
-  background: rgba(255, 255, 255, 0.95) !important;
-  backdrop-filter: blur(16px) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.15) !important;
-  border: 1px solid rgba(255, 255, 255, 0.9) !important;
+  background: #FFFFFF !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 30px -6px rgba(15, 23, 42, 0.15) !important;
+  border: 1px solid #E2E8F0 !important;
   padding: 0 !important;
 }
 

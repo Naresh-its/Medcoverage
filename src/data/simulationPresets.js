@@ -101,9 +101,23 @@ export const SIMULATION_PRESETS = [
 
 // Calculation function for dynamic simulation input
 export function calculateSimulationResult(zone, action, resourceType, quantity) {
-  const currentCoverage = zone.baselineMetrics.overallCoveragePct;
-  const currentResponse = zone.baselineMetrics.avgResponseMin;
-  const population = zone.population;
+  const currentCoverage = zone.coveragePct 
+    ?? zone.calculated?.coveragePct 
+    ?? zone.engineResult?.coveragePct 
+    ?? zone.metrics?.coveragePct 
+    ?? zone.baselineMetrics?.overallCoveragePct 
+    ?? 38;
+  const currentResponse = zone.responseMin 
+    ?? zone.avgResponseMin 
+    ?? zone.travelTimeMin 
+    ?? zone.calculated?.avgResponseMin 
+    ?? zone.baselineMetrics?.avgResponseMin 
+    ?? 30;
+  const population = zone.population || 250000;
+  const currentStatus = zone.status 
+    ?? zone.calculated?.status 
+    ?? zone.engineResult?.status 
+    ?? (currentCoverage < 50 ? "dead_zone" : currentCoverage < 70 ? "limited" : "covered");
 
   let coverageGain = 0;
   let responseReduction = 0;
@@ -143,8 +157,10 @@ export function calculateSimulationResult(zone, action, resourceType, quantity) 
     before: {
       coveragePct: currentCoverage,
       responseMin: currentResponse,
-      zoneStatus: zone.status,
-      populationCovered: Math.round(population * currentCoverage / 100)
+      zoneStatus: currentStatus,
+      populationCovered: Math.round(population * currentCoverage / 100),
+      primaryBottleneck: zone.primaryBottleneck ?? zone.calculated?.primaryBottleneck ?? zone.engineResult?.primaryBottleneck ?? null,
+      missingResources: zone.missingResources ?? zone.calculated?.missingResources ?? zone.engineResult?.missingResources ?? []
     },
     after: {
       coveragePct: newCoverage,

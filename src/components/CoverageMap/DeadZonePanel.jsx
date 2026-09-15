@@ -1,139 +1,216 @@
 import React from 'react';
 import { 
-  AlertTriangle, X, ArrowRight, ShieldAlert, Clock, 
-  Droplet, Activity, Sparkles, CheckCircle2, ChevronRight 
+  AlertTriangle, X, ArrowRight, Sparkles, AlertOctagon
 } from 'lucide-react';
 
 export default function DeadZonePanel({ zone, onClose, onSimulateIntervention }) {
   if (!zone) return null;
 
-  const isDeadZone = zone.status === 'dead_zone';
+  // 1. Dynamic coverage & status from calculated engine result (with legacy demo fallback)
+  const coveragePct = zone.coveragePct 
+    ?? zone.calculated?.coveragePct 
+    ?? zone.engineResult?.coveragePct 
+    ?? zone.metrics?.coveragePct 
+    ?? zone.baselineMetrics?.overallCoveragePct 
+    ?? 0;
+
+  const status = zone.status 
+    ?? zone.calculated?.status 
+    ?? zone.engineResult?.status 
+    ?? (coveragePct < 50 ? 'dead_zone' : coveragePct < 70 ? 'limited' : 'covered');
+
+  const isDeadZone = status === 'dead_zone';
+
+  // 2. Dynamic response and travel metrics from calculated engine result
+  const avgResponseMin = zone.responseMin 
+    ?? zone.avgResponseMin 
+    ?? zone.travelTimeMin 
+    ?? zone.calculated?.avgResponseMin 
+    ?? zone.baselineMetrics?.avgResponseMin 
+    ?? 15;
+
+  const nearestIcuKm = zone.nearestIcuKm 
+    ?? zone.icuDistanceKm 
+    ?? zone.calculated?.nearestIcuKm 
+    ?? zone.baselineMetrics?.nearestIcuKm 
+    ?? 'N/A';
+
+  const nearestBloodKm = zone.nearestBloodKm 
+    ?? zone.bloodDistanceKm 
+    ?? zone.calculated?.nearestBloodKm 
+    ?? zone.baselineMetrics?.nearestBloodKm 
+    ?? 'N/A';
+
+  // 3. Dynamic engine bottleneck, explanation & missing resources
+  const primaryBottleneck = zone.primaryBottleneck 
+    ?? zone.calculated?.primaryBottleneck 
+    ?? zone.engineResult?.primaryBottleneck 
+    ?? zone.metrics?.primaryBottleneck;
+
+  const explanation = zone.explanation 
+    ?? zone.calculated?.explanation 
+    ?? zone.engineResult?.explanation 
+    ?? zone.metrics?.explanation;
+
+  const missingResources = zone.missingResources 
+    ?? zone.calculated?.missingResources 
+    ?? zone.engineResult?.missingResources 
+    ?? zone.metrics?.missingResources;
 
   return (
-    <div className="bg-white rounded-lg border border-red-300 shadow-lg overflow-hidden flex flex-col max-h-full">
-      {/* Header Banner */}
-      <div className="bg-red-600 text-white px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-white animate-pulse" />
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-lg overflow-hidden flex flex-col max-h-[calc(100%-2rem)] transition-all">
+      
+      {/* Header Bar */}
+      <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div className="flex items-center gap-3">
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+            isDeadZone ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+          }`}>
+            <AlertTriangle className="w-5 h-5" />
+          </div>
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-red-100">
-              Coverage Analysis Report
-            </span>
-            <h3 className="text-base font-bold leading-tight">
-              {isDeadZone ? 'High-Risk Medical Dead Zone' : 'Limited Healthcare Access Zone'}
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                isDeadZone 
+                  ? 'bg-red-100 text-red-800 border border-red-200' 
+                  : 'bg-amber-100 text-amber-800 border border-amber-200'
+              }`}>
+                {isDeadZone ? '🔴 High Risk of Delay' : '🟡 Slow Care Access'}
+              </span>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 leading-tight mt-0.5">
+              {zone.name}
             </h3>
           </div>
         </div>
+
         <button
           onClick={onClose}
-          className="text-white/80 hover:text-white p-1 rounded-md hover:bg-red-700 transition-colors"
+          aria-label="Close area panel"
+          className="w-8 h-8 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 hover:text-slate-900 flex items-center justify-center transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Sector Name & Metrics */}
-      <div className="p-4 overflow-y-auto space-y-4">
-        <div>
-          <span className="text-xs font-semibold text-slate-500 uppercase">Sector:</span>
-          <h4 className="text-lg font-extrabold text-slate-900">{zone.name}</h4>
-          <p className="text-xs text-slate-500">Zone Code: {zone.code} • Population at Risk: {zone.population.toLocaleString()}</p>
-        </div>
-
-        {/* Compact Key Stats Grid */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="p-2.5 rounded-md bg-red-50/80 border border-red-100">
-            <span className="text-[10px] font-bold uppercase text-red-700">Effective Coverage</span>
-            <div className="text-2xl font-black text-red-600">
-              {zone.baselineMetrics.overallCoveragePct}%
-            </div>
-            <span className="text-[10px] text-red-600 font-medium">Critical deficit</span>
+      {/* Scrollable Body */}
+      <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-left">
+        
+        {/* 1. Safe Access Percentage */}
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-600 font-semibold">
+            <span>Community Emergency Protection</span>
+            <span>Pop: {zone.population ? zone.population.toLocaleString() : 'N/A'}</span>
           </div>
 
-          <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-bold uppercase text-slate-500">Ambulance Response</span>
-            <div className="text-2xl font-black text-slate-900">
-              {zone.baselineMetrics.avgResponseMin} <span className="text-xs font-normal text-slate-500">min</span>
-            </div>
-            <span className="text-[10px] text-red-600 font-semibold">Exceeds golden hour</span>
+          <div className="flex items-baseline gap-2">
+            <span className={`text-3xl font-extrabold ${isDeadZone ? 'text-red-600' : 'text-amber-600'}`}>
+              {coveragePct}%
+            </span>
+            <span className="text-xs text-slate-600 font-medium">
+              {isDeadZone ? 'Critically below safe target (70%)' : 'Needs attention (50–69%)'}
+            </span>
           </div>
 
-          <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-bold uppercase text-slate-500">Nearest Suitable ICU</span>
-            <div className="text-lg font-bold text-slate-900">
-              {zone.baselineMetrics.nearestIcuKm} km
-            </div>
-            <span className="text-[10px] text-slate-500">Far beyond rapid range</span>
-          </div>
-
-          <div className="p-2.5 rounded-md bg-slate-50 border border-slate-200">
-            <span className="text-[10px] font-bold uppercase text-slate-500">Blood Availability</span>
-            <div className="text-lg font-bold text-amber-600">
-              Limited / Absent
-            </div>
-            <span className="text-[10px] text-slate-500">Nearest bank {zone.baselineMetrics.nearestBloodKm} km</span>
+          {/* Clear Progress bar */}
+          <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                isDeadZone ? 'bg-red-600' : 'bg-amber-500'
+              }`}
+              style={{ width: `${Math.max(5, coveragePct)}%` }}
+            />
           </div>
         </div>
 
-        {/* Root Causes: WHY is this area underserved? */}
-        <div className="space-y-2">
-          <h5 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-            <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
-            Why is this area underserved?
-          </h5>
-          <div className="space-y-1.5 bg-slate-50 p-3 rounded-md border border-slate-200 text-xs">
-            {zone.reasons && zone.reasons.length > 0 ? (
-              zone.reasons.map((reason, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-slate-700">
-                  <span className="text-red-600 font-bold shrink-0">•</span>
-                  <span>{reason}</span>
-                </div>
-              ))
-            ) : (
-              <p className="text-slate-500">Lack of specialized emergency care facilities within the critical golden hour travel perimeter.</p>
+        {/* 2. Plain English Explanation */}
+        {(primaryBottleneck || explanation) && (
+          <div className="p-4 rounded-xl bg-red-50/60 border border-red-200 text-xs text-slate-800 space-y-1.5">
+            <span className="text-xs font-bold text-red-800 flex items-center gap-1">
+              <AlertOctagon className="w-3.5 h-3.5 text-red-600" />
+              Primary Cause of Delay:
+            </span>
+            {primaryBottleneck && (
+              <p className="text-sm font-bold text-slate-900">
+                {primaryBottleneck}
+              </p>
+            )}
+            {explanation && (
+              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                {explanation}
+              </p>
             )}
           </div>
+        )}
+
+        {/* 3. Missing Tools */}
+        {Array.isArray(missingResources) && missingResources.length > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-xs font-bold text-slate-700 block">
+              Equipment Missing in This Area:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {missingResources.map((res, idx) => (
+                <span 
+                  key={idx} 
+                  className="text-xs font-semibold px-3 py-1 rounded-full bg-red-50 text-red-800 border border-red-200 flex items-center gap-1.5"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                  {typeof res === 'string' ? res : res.name || res.label || res.type}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 4. Three Key Measurements */}
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
+            <span className="text-xs text-slate-500 font-medium block">Ambulance</span>
+            <span className="text-base font-bold text-slate-900 block mt-0.5">{avgResponseMin} min</span>
+            <span className="text-[11px] text-red-600 font-semibold">{avgResponseMin > 15 ? 'Too slow' : 'Safe'}</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
+            <span className="text-xs text-slate-500 font-medium block">Nearest ICU</span>
+            <span className="text-base font-bold text-slate-900 block mt-0.5">{nearestIcuKm !== 'N/A' ? `${nearestIcuKm} km` : 'N/A'}</span>
+            <span className="text-[11px] text-slate-500 font-medium">Critical care</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
+            <span className="text-xs text-slate-500 font-medium block">Blood Bank</span>
+            <span className="text-base font-bold text-slate-900 block mt-0.5">{nearestBloodKm !== 'N/A' ? `${nearestBloodKm} km` : 'None'}</span>
+            <span className="text-[11px] text-slate-500 font-medium">Universal O-</span>
+          </div>
         </div>
 
-        {/* Suggested Intervention Box */}
+        {/* 5. Recommended Solution */}
         {zone.suggestedIntervention && (
-          <div className="p-3.5 rounded-lg bg-emerald-50/80 border border-emerald-200 space-y-2.5">
+          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 space-y-2.5">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 uppercase tracking-wider">
+              <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                Suggested Intervention
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-800">
-                Virtual Simulation
+                Recommended Community Fix
+              </span>
+              <span className="text-xs font-bold text-emerald-800">
+                Target: {zone.suggestedIntervention.expectedCoveragePct}% Protected
               </span>
             </div>
 
-            <p className="text-sm font-bold text-emerald-950">
+            <p className="text-sm font-bold text-slate-900">
               {zone.suggestedIntervention.title}
             </p>
 
-            <div className="flex items-center justify-between text-xs pt-1 border-t border-emerald-200/60 text-emerald-900 font-medium">
-              <div>
-                Coverage: <span className="line-through text-slate-400">{zone.baselineMetrics.overallCoveragePct}%</span>{' '}
-                <strong className="text-emerald-700 font-bold text-sm">→ {zone.suggestedIntervention.expectedCoveragePct}%</strong>
-              </div>
-              <div>
-                Response: <strong className="text-emerald-700">{zone.suggestedIntervention.expectedResponseMin}m</strong>
-              </div>
-            </div>
-
             <button
               onClick={() => onSimulateIntervention(zone, zone.suggestedIntervention)}
-              className="w-full mt-2 py-2 px-3 bg-red-600 hover:bg-red-700 text-white rounded-md text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+              className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
             >
-              <span>Simulate This Intervention</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>See How to Fix This Area</span>
+              <ArrowRight className="w-4 h-4 text-emerald-400" />
             </button>
-            <p className="text-[10px] text-slate-500 text-center">
-              *Evaluates simulated resource impact before capital deployment
-            </p>
           </div>
         )}
+
       </div>
     </div>
   );

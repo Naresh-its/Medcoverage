@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { COVERAGE_ZONES } from '../../data/coverageZones';
 import { HOSPITALS, BLOOD_BANKS, AMBULANCES, DIAGNOSTICS, PHARMACIES } from '../../data/mockHealthcareData';
-import { MEDICAL_NEEDS } from '../../data/medicalNeeds';
 import MapLegend from './MapLegend';
 import DeadZonePanel from './DeadZonePanel';
 import ResourceDetailModal from './ResourceDetailModal';

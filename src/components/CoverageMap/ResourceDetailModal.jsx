@@ -1,25 +1,25 @@
 import React from 'react';
-import { X, Phone, Clock, MapPin, Check, AlertCircle, ShieldCheck, Activity } from 'lucide-react';
+import { X, Phone, MapPin, Check } from 'lucide-react';
 
 export default function ResourceDetailModal({ resource, onClose }) {
   if (!resource) return null;
 
   return (
-    <div className="bg-white rounded-lg border border-slate-300 shadow-xl overflow-hidden max-w-sm w-full">
+    <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/90 shadow-[0_20px_50px_-10px_rgba(15,23,42,0.18)] overflow-hidden max-w-sm w-full">
       {/* Header */}
-      <div className="bg-slate-900 text-white p-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{resource._categoryEmoji || '🏥'}</span>
+      <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">{resource._categoryEmoji || '🏥'}</span>
           <div>
-            <h3 className="text-sm font-bold truncate max-w-[240px]">{resource.name}</h3>
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">{resource._categoryLabel || 'Healthcare Facility'}</span>
+            <h3 className="text-sm font-black truncate max-w-[220px]">{resource.name}</h3>
+            <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">{resource._categoryLabel || 'Healthcare Facility'}</span>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="text-slate-400 hover:text-white p-1 rounded transition-colors"
+          className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
 
