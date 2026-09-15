@@ -72,7 +72,16 @@ runTest('Critical modality failure drops effective coverage score below 50% even
   const west = COVERAGE_ZONES.find(z => z.id === 'zone-west');
   const severeBleeding = MEDICAL_NEEDS.find(n => n.id === 'severe_bleeding');
   
-  const result = calculateEffectiveCoverage(west, severeBleeding, baselineResources);
+  // Hospital is 4 min away, but all accessible regional blood centers suffer O- stockout
+  const stockoutResources = {
+    ...baselineResources,
+    bloodBanks: baselineResources.bloodBanks.map(b => ({
+      ...b,
+      inventory: { ...b.inventory, 'O-': 0 }
+    }))
+  };
+
+  const result = calculateEffectiveCoverage(west, severeBleeding, stockoutResources);
   assert(result.effectiveCoveragePct <= 50, `Expected <= 50% due to critical modality failure, got ${result.effectiveCoveragePct}%`);
   assert(result.isClinicallyConstrained === true, 'Should be flagged as clinically constrained');
   assert.strictEqual(result.status, 'dead_zone', 'Should be classified as dead_zone');
@@ -152,8 +161,96 @@ runTest('simulateIntervention does NOT mutate baseline resources or zone data', 
   assert.strictEqual(east.status, initialEastStatus, 'Zone status must not mutate');
 });
 
+// TEST 9 (REQUIRED: FALLBACK SUCCESS): Blood Bank A nearest with O- stockout, Blood Bank B farther with O- within threshold
+runTest('Blood bank fallback success: nearest has O- stockout, but farther candidate within threshold satisfies requirement', () => {
+  const fallbackResources = {
+    ...baselineResources,
+    bloodBanks: [
+      {
+        id: 'bb-near-empty',
+        name: 'Blood Bank A (Nearest, O- stockout)',
+        location: { lat: 13.0720, lng: 80.2600 }, // 0 km
+        inventory: { 'O-': 0, 'O+': 20 }
+      },
+      {
+        id: 'bb-far-stocked',
+        name: 'Blood Bank B (Backup, O- in stock)',
+        location: { lat: 13.0110, lng: 80.2330 }, // ~8 km, ~18 min
+        inventory: { 'O-': 5, 'O+': 30 }
+      }
+    ]
+  };
+  const central = COVERAGE_ZONES.find(z => z.id === 'zone-central');
+  const match = matchResourceRequirement(central.center, 'blood', 30, fallbackResources);
+  
+  assert.strictEqual(match.satisfied, true, 'Blood requirement must be satisfied via fallback candidate');
+  assert.strictEqual(match.bestMatch.id, 'bb-far-stocked', 'Should select Blood Bank B which has O- inventory');
+  assert.strictEqual(match.isWithinWindow, true, 'Selected candidate must be within golden window');
+
+  // Verify coverage calculation does NOT incorrectly fail for blood
+  const severeBleeding = MEDICAL_NEEDS.find(n => n.id === 'severe_bleeding');
+  const covResult = calculateEffectiveCoverage(central, severeBleeding, fallbackResources);
+  assert(covResult.effectiveCoveragePct >= 70, `Expected covered (>= 70%), got ${covResult.effectiveCoveragePct}%`);
+  assert.strictEqual(covResult.status, 'covered');
+});
+
+// TEST 10 (REQUIRED: GENUINE FAILURE): All blood banks have O- stockout
+runTest('Genuine failure: when all eligible blood banks have O- stockout, requirement remains unsatisfied', () => {
+  const genuineFailureResources = {
+    ...baselineResources,
+    bloodBanks: [
+      {
+        id: 'bb-a',
+        name: 'Blood Bank Alpha',
+        location: { lat: 13.0700, lng: 80.2600 },
+        inventory: { 'O-': 0, 'O+': 10 }
+      },
+      {
+        id: 'bb-b',
+        name: 'Blood Bank Beta',
+        location: { lat: 13.0500, lng: 80.2500 },
+        inventory: { 'O-': 0, 'O+': 15 }
+      }
+    ]
+  };
+  const central = COVERAGE_ZONES.find(z => z.id === 'zone-central');
+  const match = matchResourceRequirement(central.center, 'blood', 30, genuineFailureResources);
+
+  assert.strictEqual(match.satisfied, false, 'Requirement must be unsatisfied when all blood banks have O- stockout');
+  assert(match.reasonIfFailed.includes('stockout'), `Reason should indicate stockout: ${match.reasonIfFailed}`);
+});
+
+// TEST 11 (REQUIRED: TOO-FAR FALLBACK): Nearest has O- stockout, second has O- but outside threshold
+runTest('Too-far fallback: stocked blood bank outside configured accessibility threshold remains unsatisfied', () => {
+  const tooFarResources = {
+    ...baselineResources,
+    bloodBanks: [
+      {
+        id: 'bb-a-near',
+        name: 'Blood Bank A (Near, O- Stockout)',
+        location: { lat: 13.0720, lng: 80.2600 }, // 0 km
+        inventory: { 'O-': 0, 'O+': 10 }
+      },
+      {
+        id: 'bb-b-far',
+        name: 'Blood Bank B (Far, O- Stocked)',
+        location: { lat: 13.6500, lng: 80.6500 }, // ~75 km away, > 65 min
+        inventory: { 'O-': 10, 'O+': 50 }
+      }
+    ]
+  };
+  const central = COVERAGE_ZONES.find(z => z.id === 'zone-central');
+  const match = matchResourceRequirement(central.center, 'blood', 30, tooFarResources);
+
+  assert.strictEqual(match.satisfied, false, 'Should remain unsatisfied if backup candidate exceeds golden window');
+  assert.strictEqual(match.isWithinWindow, false, 'Backup candidate must be marked outside window');
+  assert(match.travelTimeMin > 30, 'Travel time must exceed the 30-minute threshold');
+  assert(match.reasonIfFailed.includes('exceeds'), `Reason should explain threshold exceedance: ${match.reasonIfFailed}`);
+});
+
 console.log('\n========================================');
 console.log(`Tests completed: ${passedTests} / ${totalTests} passed`);
+
 console.log('========================================\n');
 
 if (passedTests !== totalTests) {

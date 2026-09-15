@@ -246,9 +246,55 @@ export function matchResourceRequirement(zoneCenter, requirementKey, goldenWindo
   let failReason = null;
 
   // Additional availability checks
-  if (requirementKey === 'blood' && !best.hasCriticalSubtype) {
+  if (requirementKey === 'blood') {
+    // Check candidates in order of distance/travel time.
+    // If the nearest has an O- stockout, continue checking the next nearest eligible candidate.
+    const validCandidate = capableCandidates.find(
+      c => c.hasCriticalSubtype && isWithinGoldenWindow(c.travelTimeMin, goldenWindowMin)
+    );
+
+    if (validCandidate) {
+      return {
+        requirementKey,
+        satisfied: true,
+        bestMatch: validCandidate,
+        distanceKm: validCandidate.distanceKm,
+        travelTimeMin: validCandidate.travelTimeMin,
+        isWithinWindow: true,
+        reasonIfFailed: null,
+        availabilityDetails: validCandidate.details
+      };
+    }
+
+    // No candidate satisfied both inventory (O-) and clinical travel-time window
     satisfied = false;
-    failReason = `Nearest blood center is ${best.travelTimeMin}m away, but has O-negative universal emergency stockout.`;
+    const candidateWithStock = capableCandidates.find(c => c.hasCriticalSubtype);
+
+    if (candidateWithStock) {
+      // Stock exists, but exceeds the accessibility window
+      return {
+        requirementKey,
+        satisfied: false,
+        bestMatch: candidateWithStock,
+        distanceKm: candidateWithStock.distanceKm,
+        travelTimeMin: candidateWithStock.travelTimeMin,
+        isWithinWindow: false,
+        reasonIfFailed: `Nearest blood center with O-negative inventory (${candidateWithStock.name}) is ${candidateWithStock.distanceKm} km away; estimated arrival time (${candidateWithStock.travelTimeMin} min) exceeds golden window of ${goldenWindowMin} min.`,
+        availabilityDetails: candidateWithStock.details
+      };
+    } else {
+      // All regional candidates have O- stockout
+      return {
+        requirementKey,
+        satisfied: false,
+        bestMatch: best,
+        distanceKm: best.distanceKm,
+        travelTimeMin: best.travelTimeMin,
+        isWithinWindow: withinWindow,
+        reasonIfFailed: `Nearest blood center (${best.name}) is ${best.travelTimeMin}m away, but has O-negative universal emergency stockout (no regional facility has available O- stock).`,
+        availabilityDetails: best.details
+      };
+    }
   } else if (requirementKey === 'ambulance' && !best.isAvailable) {
     // If nearest ambulance is busy/en route, look for next available
     const nextFree = capableCandidates.find(c => c.isAvailable);
