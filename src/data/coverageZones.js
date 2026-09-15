@@ -173,5 +173,83 @@ export const COVERAGE_ZONES = [
       expectedResponseMin: 17,
       peopleBenefited: "135,000"
     }
+  },
+  {
+    id: "zone-southwest",
+    name: "South-West Growth Corridor (Tambaram - Chromepet)",
+    code: "Z-106",
+    status: "covered",
+    center: { lat: 12.9300, lng: 80.1400 },
+    radius: 4400,
+    polygon: [
+      [12.9600, 80.1150],
+      [12.9650, 80.1650],
+      [12.9150, 80.1600],
+      [12.9100, 80.1150],
+      [12.9350, 80.1100]
+    ],
+    population: 460000,
+    baselineMetrics: {
+      overallCoveragePct: 76,
+      emergencyCoveragePct: 74,
+      avgResponseMin: 14,
+      nearestIcuKm: 2.5,
+      nearestBloodKm: 2.8,
+      icuBedAvailable: 9,
+      ambulanceUnitsFree: 3
+    },
+    riskAssessment: "Robust quaternary hospital presence along the GST corridor, well-buffered against emergency surge."
+  },
+  {
+    id: "zone-coastal",
+    name: "Coastal Emergency Belt (Besant Nagar - ECR)",
+    code: "Z-107",
+    status: "limited",
+    center: { lat: 12.9800, lng: 80.2650 },
+    radius: 4100,
+    polygon: [
+      [12.9950, 80.2450],
+      [12.9900, 80.2800],
+      [12.9450, 80.2750],
+      [12.9400, 80.2450],
+      [12.9650, 80.2400]
+    ],
+    population: 310000,
+    baselineMetrics: {
+      overallCoveragePct: 58,
+      emergencyCoveragePct: 54,
+      avgResponseMin: 22,
+      nearestIcuKm: 6.8,
+      nearestBloodKm: 5.9,
+      icuBedAvailable: 3,
+      ambulanceUnitsFree: 1
+    },
+    riskAssessment: "Linear coastal corridor constraint: high travel times during weekend tourist and beach traffic peaks."
+  },
+  {
+    id: "zone-highway",
+    name: "West Industrial Highway Belt (Poonamallee - Sriperumbudur)",
+    code: "Z-108",
+    status: "dead_zone",
+    center: { lat: 13.0300, lng: 80.0500 },
+    radius: 5600,
+    polygon: [
+      [13.0650, 80.0200],
+      [13.0600, 80.0900],
+      [13.0050, 80.0850],
+      [13.0000, 80.0150],
+      [13.0300, 80.0100]
+    ],
+    population: 290000,
+    baselineMetrics: {
+      overallCoveragePct: 34,
+      emergencyCoveragePct: 31,
+      avgResponseMin: 34,
+      nearestIcuKm: 28.0,
+      nearestBloodKm: 26.5,
+      icuBedAvailable: 1,
+      ambulanceUnitsFree: 0
+    },
+    riskAssessment: "CRITICAL HIGHWAY DEAD ZONE: Heavy industrial factory corridor with major transit gaps to central blood banks and neurotrauma care."
   }
 ];

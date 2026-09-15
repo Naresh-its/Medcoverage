@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  Search, MapPin, Stethoscope, Phone, Navigation,
+  Search, MapPin, Stethoscope, Phone,
   Bed, Clock, CheckCircle2, AlertTriangle, ArrowRight, 
-  Zap, Check, X, Activity
+  Zap, Check, X, Activity, Compass
 } from 'lucide-react';
 import { MEDICAL_NEEDS } from '../data/medicalNeeds';
-import { COVERAGE_ZONES } from '../data/coverageZones';
-import { HOSPITALS } from '../data/mockHealthcareData';
+import { REGIONAL_SECTORS, getRankedHospitalsForRegion } from '../data/regionalHospitalData';
+import DemoNavigationModal from '../components/CoverageMap/DemoNavigationModal';
 
 export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
-  const navigate = useNavigate();
 
   // Search State
   const [selectedDiseaseId, setSelectedDiseaseId] = useState(selectedNeedId || 'severe_bleeding');
@@ -18,103 +17,16 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
   const [hasSearched, setHasSearched] = useState(true);
   const [isSearchingAnim, setIsSearchingAnim] = useState(false);
 
-  // Active Need & Zone
+  // Active Navigation State (when user clicks [View Hospital])
+  const [activeNavHospital, setActiveNavHospital] = useState(null);
+
+  // Active Need & Sector
   const currentNeed = MEDICAL_NEEDS.find(n => n.id === selectedDiseaseId) || MEDICAL_NEEDS[0];
-  const currentZone = COVERAGE_ZONES.find(z => z.id === selectedZoneId) || COVERAGE_ZONES[0];
+  const currentSector = REGIONAL_SECTORS.find(s => s.id === selectedZoneId) || REGIONAL_SECTORS[0];
 
-  // Calculate distance using Haversine
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371; // km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return parseFloat((R * c).toFixed(1));
-  };
-
-  // Find & rank multiple nearby hospitals for the selected disease and zone
-  const rankedHospitals = HOSPITALS.map(h => {
-    const distKm = getDistance(currentZone.center.lat, currentZone.center.lng, h.location.lat, h.location.lng);
-    const estTimeMin = Math.max(4, Math.round((distKm / 42) * 60 + 3)); // 42 km/h + 3 min turnout
-    
-    // Check if hospital provides required capability for this disease
-    let hasCapability = true;
-    let missingReason = null;
-
-    if (currentNeed.id === 'severe_bleeding') {
-      if (!h.capabilities.surgery || !h.capabilities.trauma) {
-        hasCapability = false;
-        missingReason = 'No Trauma / Vascular Surgery';
-      }
-    } else if (currentNeed.id === 'stroke') {
-      if (!h.capabilities.ct_scan) {
-        hasCapability = false;
-        missingReason = 'No Operational 24/7 CT Scan';
-      }
-    } else if (currentNeed.id === 'trauma') {
-      if (!h.capabilities.trauma || !h.capabilities.icu) {
-        hasCapability = false;
-        missingReason = 'Lacks Level-1 Trauma & ICU Bed';
-      }
-    } else if (currentNeed.id === 'dialysis') {
-      if (!h.capabilities.dialysis) {
-        hasCapability = false;
-        missingReason = 'No Hemodialysis Station';
-      }
-    }
-
-    const isWithinGolden = estTimeMin <= currentNeed.goldenWindowMin;
-
-    // Check regional blood availability
-    const bloodAvailable = h.zoneId === 'zone-central' || h.zoneId === 'zone-south';
-    const traumaReady = !!h.capabilities.trauma;
-    const surgeryReady = !!h.capabilities.surgery;
-    const ambulanceReady = h.metrics.availableIcuBeds > 0;
-
-    return {
-      ...h,
-      distKm,
-      estTimeMin,
-      hasCapability,
-      missingReason,
-      isWithinGolden,
-      bloodAvailable,
-      traumaReady,
-      surgeryReady,
-      ambulanceReady,
-      matchScore: (hasCapability ? 100 : 30) - distKm * 1.5 + (h.metrics.availableIcuBeds > 5 ? 10 : 0)
-    };
-  }).sort((a, b) => b.matchScore - a.matchScore).slice(0, 4);
-
-  // Assign ranking tiers and concise rationale
-  const rankingTiers = [
-    {
-      badge: 'TOP MATCH',
-      title: 'Best Match',
-      badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-      reason: 'Lowest transit time with verified trauma suite, co-located blood bank, and active resuscitation team.'
-    },
-    {
-      badge: 'ALTERNATIVE',
-      title: 'Strong Alternative',
-      badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
-      reason: 'High surgical and ICU capacity with dedicated emergency bays along rapid arterial transit.'
-    },
-    {
-      badge: 'NEARBY',
-      title: 'Nearby Option',
-      badgeColor: 'bg-slate-100 text-slate-800 border-slate-300',
-      reason: 'Reliable secondary clinical emergency care within acceptable golden window threshold.'
-    },
-    {
-      badge: 'BACKUP',
-      title: 'Backup Option',
-      badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
-      reason: 'Regional emergency triage and stabilization facility with surge capacity.'
-    }
-  ];
+  // Retrieve the 4 distinct ranked hospitals for the selected region and medical condition
+  // Strictly guarantees: 2 GREEN, 1 YELLOW, 1 RED
+  const rankedHospitals = getRankedHospitalsForRegion(currentSector.id, currentNeed.id);
 
   // Trigger search with animation
   const handleSearch = () => {
@@ -125,7 +37,12 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
     setTimeout(() => {
       setIsSearchingAnim(false);
       setHasSearched(true);
-    }, 300);
+    }, 280);
+  };
+
+  // Open simulated demo navigation for the clicked hospital
+  const handleOpenNavigation = (h) => {
+    setActiveNavHospital(h);
   };
 
   return (
@@ -139,7 +56,7 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
         {/* Top Clinical Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold">
           <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>Emergency Hospital & Clinical Capability Matching</span>
+          <span>Regional Healthcare Intelligence & Capability Matching</span>
         </div>
 
         {/* Title */}
@@ -147,7 +64,7 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
           Find the <span className="text-blue-600">Right Emergency Hospital</span> in Seconds
         </h1>
         <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto font-medium">
-          Matches critical conditions against verified hospital capabilities, real ICU beds, and emergency golden hour transit times.
+          Evaluates condition-specific clinical readiness against golden-hour transit limits. Changing your sector reveals local facilities and clinical bottlenecks.
         </p>
 
         {/* Search Box Shell */}
@@ -162,7 +79,10 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
               </label>
               <select
                 value={selectedDiseaseId}
-                onChange={(e) => setSelectedDiseaseId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDiseaseId(e.target.value);
+                  if (setSelectedNeedId) setSelectedNeedId(e.target.value);
+                }}
                 className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none cursor-pointer"
               >
                 {MEDICAL_NEEDS.map((n) => (
@@ -173,7 +93,7 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
               </select>
             </div>
 
-            {/* 2. Sector Selector */}
+            {/* 2. Sector Selector (Supports 8 distinct Chennai sectors) */}
             <div className="md:col-span-4 text-left bg-slate-50 hover:bg-slate-100/80 p-2.5 rounded-xl border border-slate-200/80 transition-colors">
               <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1 mb-0.5">
                 <MapPin className="w-3.5 h-3.5 text-emerald-600" />
@@ -184,7 +104,7 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
                 onChange={(e) => setSelectedZoneId(e.target.value)}
                 className="w-full bg-transparent text-xs sm:text-sm font-bold text-slate-900 focus:outline-none cursor-pointer"
               >
-                {COVERAGE_ZONES.map((z) => (
+                {REGIONAL_SECTORS.map((z) => (
                   <option key={z.id} value={z.id}>
                     {z.name}
                   </option>
@@ -192,7 +112,7 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
               </select>
             </div>
 
-            {/* 3. Glowing Action Button */}
+            {/* 3. Tactile Action Button */}
             <div className="md:col-span-3">
               <button
                 onClick={handleSearch}
@@ -214,7 +134,7 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
 
           </div>
 
-          {/* Quick Filter Pills */}
+          {/* Quick Filter Condition Pills */}
           <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3 text-xs">
             <span className="text-[11px] font-semibold text-slate-400 mr-1">Quick Select:</span>
             {MEDICAL_NEEDS.map((n) => {
@@ -243,21 +163,24 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. MULTIPLE RANKED HOSPITAL RESULTS */}
+      {/* 2. REGION-SPECIFIC HOSPITAL RESULTS (2 GREEN, 1 YELLOW, 1 RED) */}
       {/* ========================================================================= */}
       {hasSearched && (
         <div className="w-full max-w-5xl space-y-4 mt-4 animate-in fade-in duration-200">
           
-          {/* Result Summary Bar */}
+          {/* Result Summary Bar with Simulated Origin Notice */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-slate-900">
-                    <strong className="text-blue-600">{rankedHospitals.length} suitable hospitals</strong> identified for {currentNeed.name} in {currentZone.name}
+                    <strong className="text-blue-600">{rankedHospitals.length} suitable hospitals</strong> identified for {currentNeed.name} in <span className="text-emerald-700 font-bold">{currentSector.name}</span>
+                  </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    Origin: {currentSector.simulatedOrigin.name}
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-500 font-medium">
@@ -275,43 +198,59 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
             </Link>
           </div>
 
-          {/* Ranked Hospitals List */}
+          {/* 4 Distinct Hospital Cards per Location */}
           <div className="space-y-3">
             {rankedHospitals.map((h, idx) => {
-              const tier = rankingTiers[idx] || rankingTiers[3];
               const isTop = idx === 0;
+              const isGreen = h.displayStatus === 'green';
+              const isYellow = h.displayStatus === 'yellow';
+
+              // Badge styling strictly by semantic accessibility status
+              const statusBadgeStyle = isGreen
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : isYellow
+                  ? 'bg-amber-50 text-amber-800 border-amber-300'
+                  : 'bg-red-50 text-red-800 border-red-300';
+
+              const cardBorder = isTop
+                ? 'border-2 border-emerald-500/80 shadow-md ring-1 ring-emerald-100'
+                : isGreen
+                  ? 'border border-slate-200 hover:border-emerald-400 shadow-2xs'
+                  : isYellow
+                    ? 'border border-slate-200 hover:border-amber-400 shadow-2xs'
+                    : 'border border-slate-200 hover:border-red-400 shadow-2xs';
 
               return (
                 <div 
                   key={h.id}
-                  className={`rounded-xl p-5 bg-white transition-all ${
-                    isTop 
-                      ? 'border-2 border-emerald-500/80 shadow-md ring-1 ring-emerald-100' 
-                      : 'border border-slate-200 hover:border-blue-400 shadow-2xs'
-                  }`}
+                  className={`rounded-xl p-5 bg-white transition-all ${cardBorder}`}
                 >
                   <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     
-                    {/* Left: Hospital Info & Ranking */}
+                    {/* Left: Hospital Info & Capability Readiness */}
                     <div className="space-y-2.5 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${tier.badgeColor}`}>
-                          {tier.badge} • #{idx + 1}
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${statusBadgeStyle}`}>
+                          {isGreen ? '🟢 ' : isYellow ? '🟡 ' : '🔴 '}{h.tierLabel} • #{h.tierRank}
                         </span>
 
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                          {h.metrics.traumaTier}
+                          {h.traumaTier}
                         </span>
 
                         {h.hasCapability ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                            <Check className="w-3 h-3" /> All Clinical Modalities Ready
+                            <Check className="w-3 h-3" /> All Required Modalities Ready
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3" /> {h.missingReason}
                           </span>
                         )}
+
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${statusBadgeStyle}`}>
+                          {h.effectiveScore}% Effective Access
+                        </span>
                       </div>
 
                       <div>
@@ -323,12 +262,12 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
                         </p>
                       </div>
 
-                      {/* Ranking Rationale */}
+                      {/* Concise Ranking Rationale */}
                       <p className="text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <strong className="text-slate-800 font-semibold">Ranking reason:</strong> {tier.reason}
+                        <strong className="text-slate-800 font-semibold">Why this ranking:</strong> {h.rankingReason}
                       </p>
 
-                      {/* Required Clinical Capabilities Checklist */}
+                      {/* Required Clinical Modalities Checklist */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
                         <div className={`flex items-center gap-1.5 p-1.5 rounded-lg border text-[11px] font-medium ${
                           h.bloodAvailable 
@@ -368,7 +307,7 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
                       </div>
                     </div>
 
-                    {/* Right: Distance, Time, Metrics & CTA */}
+                    {/* Right: Transit Time, Metrics & View Hospital Action */}
                     <div className="flex flex-col items-start lg:items-end justify-between gap-3 lg:border-l lg:border-slate-100 lg:pl-5 shrink-0">
                       
                       {/* Distance & Time Tag */}
@@ -380,8 +319,8 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
                           <Clock className="w-3.5 h-3.5 text-blue-600" />
                           <span>~{h.estTimeMin} min arrival</span>
                         </div>
-                        <span className={`text-[10px] font-bold ${h.isWithinGolden ? 'text-emerald-700' : 'text-amber-700'}`}>
-                          {h.isWithinGolden ? '✓ Within Golden Hour' : '⚠️ Near Window Limit'}
+                        <span className={`text-[10px] font-bold ${h.estTimeMin <= currentNeed.goldenWindowMin ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {h.estTimeMin <= currentNeed.goldenWindowMin ? '✓ Within Golden Window' : '⚠️ Exceeds Window'}
                         </span>
                       </div>
 
@@ -389,22 +328,22 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
                       <div className="flex items-center gap-3 text-xs text-slate-600">
                         <div className="flex items-center gap-1">
                           <Bed className="w-3.5 h-3.5 text-slate-400" />
-                          <span><strong>{h.metrics.availableIcuBeds}</strong> ICU Beds</span>
+                          <span><strong>{h.availableIcuBeds}</strong> ICU Beds</span>
                         </div>
                         <span>•</span>
                         <div className="flex items-center gap-1">
                           <Activity className="w-3.5 h-3.5 text-slate-400" />
-                          <span><strong>{h.metrics.ventilatorAvailable}</strong> Vents</span>
+                          <span><strong>{h.ventilatorAvailable}</strong> Vents</span>
                         </div>
                       </div>
 
-                      {/* Actions */}
+                      {/* Actions: View Hospital triggers simulated demo navigation for that exact hospital */}
                       <div className="flex items-center gap-2 w-full lg:w-auto pt-1">
                         <button
-                          onClick={() => navigate('/coverage')}
-                          className="flex-1 lg:flex-initial py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          onClick={() => handleOpenNavigation(h)}
+                          className="flex-1 lg:flex-initial py-2 px-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                         >
-                          <Navigation className="w-3.5 h-3.5" />
+                          <Compass className="w-3.5 h-3.5 text-emerald-400" />
                           <span>View Hospital</span>
                         </button>
                         <a
@@ -426,6 +365,18 @@ export default function HomePage({ selectedNeedId, setSelectedNeedId }) {
           </div>
 
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. SIMULATED DEMO NAVIGATION MODAL */}
+      {/* ========================================================================= */}
+      {activeNavHospital && (
+        <DemoNavigationModal
+          hospital={activeNavHospital}
+          origin={currentSector.simulatedOrigin}
+          currentNeed={currentNeed}
+          onClose={() => setActiveNavHospital(null)}
+        />
       )}
 
     </div>
