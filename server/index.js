@@ -24,3 +24,9 @@ app.get("/api/health", (req, res) => {
 
 // Export the app for potential testing or external start scripts
 export default app;
+
+const PORT = process.env.PORT || 3005;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`MedCoverage API running on port ${PORT}`);
+});
