@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: medcoverage-api
+    runtime: node
+    plan: free
+    branch: new_backend
+    buildCommand: npm install
+    startCommand: node server/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production

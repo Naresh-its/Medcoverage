@@ -11,10 +11,11 @@ import routesRoutes from './routes/routes.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Enable CORS for frontend clients
+// Enable CORS for frontend clients (supports local dev and deployed frontends like Vercel)
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
