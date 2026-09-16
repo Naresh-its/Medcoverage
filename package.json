@@ -5,11 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.js",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:engine": "node tests/engine.test.js",
+    "test:backend": "node tests/backend.test.js",
+    "test": "node tests/engine.test.js && node tests/backend.test.js"
   },
   "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
     "framer-motion": "^13.2.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.45.0",
